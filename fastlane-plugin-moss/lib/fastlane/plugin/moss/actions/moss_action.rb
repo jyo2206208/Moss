@@ -319,7 +319,7 @@ module Fastlane
             end
           end
 
-          moss = Moss.new
+          moss = Mosss.new
           moss.name = moss_name
           moss.version = moss_version
           moss.commitish = moss_commitish
@@ -378,7 +378,7 @@ module Fastlane
   end
 end
 
-class Moss
+class Mosss
     attr_accessor:name, :frameworks, :commitish, :version
 end
 
