@@ -1,6 +1,4 @@
 require 'fastlane/action'
-require 'fileutils'
-require 'rubygems'
 require 'json'
 require_relative '../helper/moss_helper'
 
