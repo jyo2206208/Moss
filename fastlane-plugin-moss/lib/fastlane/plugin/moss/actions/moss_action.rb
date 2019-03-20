@@ -91,7 +91,7 @@ module Fastlane
             return
           end
 
-          UI.important("[Skip Moss] No Carthage.resolve file found")
+          UI.important("[Skip moss] No Carthage.resolve file found")
       end
 
       #####################################################
@@ -105,50 +105,50 @@ module Fastlane
         execute_cmd("rm -rf #{TMP_PATH};mkdir -p #{TMP_PATH}")
 
         # Get the zip list from remote server
-        target_moss_list = target_moss_list(ssh_path)
+        target_library_list = target_library_list(ssh_path)
 
         # Storage the frameworks that found in local but not found in remote server
-        ((target_moss_list + moss_list()).uniq { |moss| moss.name + moss.version } - target_moss_list).each do |moss|
+        ((target_library_list + library_list()).uniq { |library| library.name + library.version } - target_library_list).each do |library|
 
-          local_zip_file = TMP_PATH + '/' + moss.name + SUFFIX_ZIP
+          local_zip_file = TMP_PATH + '/' + library.name + SUFFIX_ZIP
           
           # Find .version file and .framework file and zip them into one zip file
-          version_file_path = CARTHAGE_BUILD_PATH + '/.' + moss.name + SUFFIX_VERSION
+          version_file_path = CARTHAGE_BUILD_PATH + '/.' + library.name + SUFFIX_VERSION
           file_exist_validation(version_file_path)
 
           frameworks_path = ""
           dsym_files_path = ""
 
-          static_framework_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + moss.name + SUFFIX_FRAMEWORK
-          static_framework_file_path = static_framework_path + '/' + moss.name
+          static_framework_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + library.name + SUFFIX_FRAMEWORK
+          static_framework_file_path = static_framework_path + '/' + library.name
 
-          if moss.frameworks.nil? then next end
-          if moss.frameworks.size == 0
+          if library.frameworks.nil? then next end
+          if library.frameworks.size == 0
             if !File::exists?(static_framework_file_path)
-              UI.important(SKIP_STORAGE_FRAMEWORK + "No framework found for " + moss.name)
+              UI.important(SKIP_STORAGE_FRAMEWORK + "No framework found for " + library.name)
               next
             end
 
             frameworks_path = static_framework_path
-            dsym_files_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + moss.name + SUFFIX_FRAMEWORK + SUFFIX_DSYM
+            dsym_files_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + library.name + SUFFIX_FRAMEWORK + SUFFIX_DSYM
           end
 
           # hash validation stop if not success
-          moss.frameworks.each do |framework|
+          library.frameworks.each do |framework|
             if !framework_validation(framework) then UI.user_error!("framework validation failed for " + framework.name) end
 
             frameworks_path = frameworks_path + ' ' + CARTHAGE_BUILD_IOS_PATH + '/' + framework.name + SUFFIX_FRAMEWORK
             dsym_files_path = dsym_files_path + ' ' + CARTHAGE_BUILD_IOS_PATH + '/' + framework.name + SUFFIX_FRAMEWORK + SUFFIX_DSYM
           end
 
-          UI.message('Start Zipping ' + moss.name + SUFFIX_ZIP)
+          UI.message('Start Zipping ' + library.name + SUFFIX_ZIP)
           execute_cmd("zip #{local_zip_file} #{version_file_path} #{dsym_files_path} -r #{frameworks_path} >> /dev/null 2>&1")
 
           # storage zip file
-          target_zip_file_path = CACHE_PATH + '/' + moss.name + '/' + moss.version
-          target_zip_file = target_zip_file_path + '/' + moss.name + SUFFIX_ZIP
+          target_zip_file_path = CACHE_PATH + '/' + library.name + '/' + library.version
+          target_zip_file = target_zip_file_path + '/' + library.name + SUFFIX_ZIP
 
-          UI.message('Start storage ' + moss.name + SUFFIX_ZIP)
+          UI.message('Start storage ' + library.name + SUFFIX_ZIP)
           execute_cmd("ssh #{ssh_path} 'mkdir -p #{target_zip_file_path}';scp -p #{local_zip_file} #{ssh_path}:#{target_zip_file}")
         end
 
@@ -164,51 +164,51 @@ module Fastlane
         execute_cmd("rm -rf #{RECEIVE_TMP_PATH};mkdir -p #{RECEIVE_TMP_PATH};mkdir -p #{CACHE_PATH}")
 
         # Fetch the frameworks that found in remote server but not found in local
-        moss_list = moss_list()
-        target_moss_list = target_moss_list(ssh_path)
-        fetch_need_moss_list = (target_moss_list + moss_list) - (target_moss_list + moss_list).uniq { |moss| moss.name + moss.version }
+        library_list = library_list()
+        target_library_list = target_library_list(ssh_path)
+        fetch_need_library_list = (target_library_list + library_list) - (target_library_list + library_list).uniq { |library| library.name + library.version }
 
-        (moss_list - fetch_need_moss_list).each do |moss|
-          UI.message(SKIP_FETCH_FRAMEWORK + "Remote server does not contain " + moss.name)
+        (library_list - fetch_need_library_list).each do |library|
+          UI.message(SKIP_FETCH_FRAMEWORK + "Remote server does not contain " + library.name)
         end
 
-        fetch_need_moss_list.each do |moss|
+        fetch_need_library_list.each do |library|
 
-          if !moss.commitish.nil? && 
-            moss.commitish == moss.version && 
-            !moss.frameworks.nil? && 
-            ((moss.frameworks.size > 0 && moss.frameworks.select {|framework| !framework_validation(framework) }.size == 0) || (moss.frameworks.size == 0 && static_framework_exists(moss)))
+          if !library.commitish.nil? && 
+            library.commitish == library.version && 
+            !library.frameworks.nil? && 
+            ((library.frameworks.size > 0 && library.frameworks.select {|framework| !framework_validation(framework) }.size == 0) || (library.frameworks.size == 0 && static_framework_exists(library)))
 
-            UI.message(SKIP_FETCH_FRAMEWORK + "Valid cache found for " + moss.name)
+            UI.message(SKIP_FETCH_FRAMEWORK + "Valid cache found for " + library.name)
             next
           end
 
-          target_zip_file = CACHE_PATH + '/' + moss.name + '/' + moss.version + '/' + moss.name + SUFFIX_ZIP
-          local_zip_file_path = RECEIVE_TMP_PATH + '/' + moss.name + '/' + moss.version
-          local_zip_file = local_zip_file_path + '/' + moss.name + SUFFIX_ZIP
+          target_zip_file = CACHE_PATH + '/' + library.name + '/' + library.version + '/' + library.name + SUFFIX_ZIP
+          local_zip_file_path = RECEIVE_TMP_PATH + '/' + library.name + '/' + library.version
+          local_zip_file = local_zip_file_path + '/' + library.name + SUFFIX_ZIP
 
-          UI.message('Start fetch ' + moss.name + SUFFIX_ZIP)
+          UI.message('Start fetch ' + library.name + SUFFIX_ZIP)
           execute_cmd("mkdir -p #{local_zip_file_path};scp -p #{ssh_path}:#{target_zip_file} #{local_zip_file}")
 
-          UI.message('Start Unzip ' + moss.name + SUFFIX_ZIP)
+          UI.message('Start Unzip ' + library.name + SUFFIX_ZIP)
           execute_cmd("unzip -o #{local_zip_file} -d . >> /dev/null 2>&1")
         end
       end
 
       private
-      def self.target_moss_list(ssh_path)
+      def self.target_library_list(ssh_path)
         return `ssh #{ssh_path} 'mkdir -p #{CACHE_PATH};find #{CACHE_PATH} -name *.zip'`.to_s.split("\n").map do |path|
-          moss = Library.new
-          moss.name = path.split("/").reverse[2]
-          moss.version = path.split("/").reverse[1]
-          moss
+          library = Library.new
+          library.name = path.split("/").reverse[2]
+          library.version = path.split("/").reverse[1]
+          library
         end
       end
 
       private
-      def self.static_framework_exists(moss)
+      def self.static_framework_exists(library)
 
-        static_framework_file_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + moss.name + SUFFIX_FRAMEWORK + '/' + moss.name
+        static_framework_file_path = CARTHAGE_BUILD_IOS_STATIC_PATH + '/' + library.name + SUFFIX_FRAMEWORK + '/' + library.name
         if File::exists?(static_framework_file_path) then return true end
 
         return false
@@ -258,26 +258,26 @@ module Fastlane
       end
 
       private
-      def self.moss_list()
+      def self.library_list()
        return IO.readlines(CARTFILE_RESOLVED_PATH).map{ |line|
 
           begin
             type = line.split[0]
-            moss_name = line.split[1].delete('"').split('/').last.split('.').first
-            moss_version = line.split[2].delete('"')
+            library_name = line.split[1].delete('"').split('/').last.split('.').first
+            library_version = line.split[2].delete('"')
           rescue
             UI.user_error!('[File read file] ' + CARTFILE_RESOLVED_PATH + ' Please make sure the resolved file is genereted by cathage.')
           end
 
-          moss_commitish = nil
-          moss_frameworks = nil
+          library_commitish = nil
+          library_frameworks = nil
 
-          version_file_path = CARTHAGE_BUILD_PATH + '/.' + moss_name + SUFFIX_VERSION
+          version_file_path = CARTHAGE_BUILD_PATH + '/.' + library_name + SUFFIX_VERSION
 
           # TODO
           # Need to support binary type cache
           if type == BINARY
-            UI.important("[No support for Binary type] " + moss_name)
+            UI.important("[No support for Binary type] " + library_name)
 
             next
           end
@@ -287,18 +287,18 @@ module Fastlane
             json = File.read(version_file_path)
             obj = JSON.parse(json)
 
-            moss_commitish = obj['commitish']
+            library_commitish = obj['commitish']
             node_iOS = obj['iOS']
             
-            if moss_commitish.nil? then UI.important('[No commitish node found] ' + version_file_path) end
+            if library_commitish.nil? then UI.important('[No commitish node found] ' + version_file_path) end
             if node_iOS.nil? then UI.important('[No iOS node found] ' + version_file_path)
             elsif node_iOS.size == 0
               UI.important('[No frameworks found] ' + version_file_path)
               # TODO 
               # Need to support static Library
-              # moss_frameworks = []
+              # library_frameworks = []
             else
-              moss_frameworks = node_iOS.map{ |node|
+              library_frameworks = node_iOS.map{ |node|
 
                 node_iOS_name = node['name']
                 if node_iOS_name.nil?
@@ -319,18 +319,18 @@ module Fastlane
             end
           end
 
-          moss = Library.new
-          moss.name = moss_name
-          moss.version = moss_version
-          moss.commitish = moss_commitish
-          moss.frameworks = moss_frameworks
+          library = Library.new
+          library.name = library_name
+          library.version = library_version
+          library.commitish = library_commitish
+          library.frameworks = library_frameworks
 
-          moss
+          library
         }.compact
       end
 
       def self.description
-        "Moss is a tool that allows developers on Apple platforms to use any frameworks as a shared cache for frameworks built with Carthage."
+        "moss is a tool that allows developers on Apple platforms to use any frameworks as a shared cache for frameworks built with Carthage."
       end
 
       def self.authors
@@ -343,7 +343,7 @@ module Fastlane
 
       def self.details
         # Optional:
-        "Moss is a tool that allows developers on Apple platforms to use any frameworks as a shared cache for frameworks built with Carthage."
+        "moss is a tool that allows developers on Apple platforms to use any frameworks as a shared cache for frameworks built with Carthage."
       end
 
       def self.available_options
