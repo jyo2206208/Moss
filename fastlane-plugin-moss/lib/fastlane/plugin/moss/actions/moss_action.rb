@@ -198,7 +198,7 @@ module Fastlane
       private
       def self.target_moss_list(ssh_path)
         return `ssh #{ssh_path} 'mkdir -p #{CACHE_PATH};find #{CACHE_PATH} -name *.zip'`.to_s.split("\n").map do |path|
-          moss = Mosss.new
+          moss = Library.new
           moss.name = path.split("/").reverse[2]
           moss.version = path.split("/").reverse[1]
           moss
@@ -319,7 +319,7 @@ module Fastlane
             end
           end
 
-          moss = Mosss.new
+          moss = Library.new
           moss.name = moss_name
           moss.version = moss_version
           moss.commitish = moss_commitish
@@ -378,7 +378,7 @@ module Fastlane
   end
 end
 
-class Mosss
+class Library
     attr_accessor:name, :frameworks, :commitish, :version
 end
 
