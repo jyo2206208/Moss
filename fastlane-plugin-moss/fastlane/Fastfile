@@ -1,3 +1,7 @@
-lane :test do
-  moss
+lane :test do |options|
+	moss(
+	  server: 'hostname008',
+	  username: 'username001',
+	  producer: options[:producer]
+	)
 end
